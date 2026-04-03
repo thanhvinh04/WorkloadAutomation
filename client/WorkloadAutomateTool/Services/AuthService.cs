@@ -65,6 +65,7 @@ namespace WorkloadAutomateTool.Services
             try
             {
                 var url = $"{_serverUrl}/api/v1/auth/login";
+                System.Diagnostics.Debug.WriteLine($"URL: {url}");
                 var payload = new { username = username, password = password };
                 var json = JsonSerializer.Serialize(payload);
 

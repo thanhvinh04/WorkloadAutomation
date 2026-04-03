@@ -17,21 +17,21 @@ namespace WorkloadAutomateTool.Forms
         {
             InitializeComponent();
             _customerCode = customerCode;
-            _serverUrl = defaultServerUrl ?? GetApiBaseUrl();
+            _serverUrl = GetApiBaseUrl();
             
             lblTitle.Text = $"Login - {_customerCode}";
         }
 
         private string GetApiBaseUrl()
         {
-            var env = ConfigurationManager.AppSettings["Environment"] ?? "prod";
+            var env = ConfigurationManager.AppSettings["Environment"] ?? "local";
             var apiKey = $"ApiBaseUrl_{env.ToLower()}";
             var apiUrl = ConfigurationManager.AppSettings[apiKey];
             
             if (string.IsNullOrEmpty(apiUrl))
-                apiUrl = ConfigurationManager.AppSettings["ApiBaseUrl_Prod"];
+                apiUrl = ConfigurationManager.AppSettings["ApiBaseUrl_local"];
             
-            return (apiUrl ?? "http://172.16.0.5:5000").TrimEnd('/');
+            return (apiUrl ?? "http://localhost:5000").TrimEnd('/');
         }
 
         private async void btnLogin_Click(object sender, EventArgs e)
@@ -70,7 +70,7 @@ namespace WorkloadAutomateTool.Forms
                 else
                 {
                     lblStatus.Text = message;
-                    MessageBox.Show(message, "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Server: {server}\nMessage: {message}", "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
