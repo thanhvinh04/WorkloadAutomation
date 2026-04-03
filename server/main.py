@@ -1,17 +1,14 @@
 import logging
 import sys
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pathlib import Path
 
 # Configure logging
-log_level = logging.DEBUG
 logging.basicConfig(
-    level=log_level,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 
@@ -38,7 +35,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Database
     logger.info(f"Database type: {DB_TYPE}")
     db_path = JOBS_DIR / "jobs.sqlite"
     logger.info(f"Database path: {db_path}")
@@ -46,16 +42,13 @@ def create_app() -> FastAPI:
     user_repository = UserRepository(db_path)
     logger.info("Database initialized")
 
-    # Services
     job_service = JobService(job_repository)
     job_worker = JobWorker(job_repository)
     logger.info("Services initialized")
 
-    # Set service containers
     set_user_repository(user_repository)
     set_services(job_service, job_worker)
 
-    # Routes
     app.include_router(health_router, prefix="/api/v1", tags=["health"])
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(jobs_router, prefix="/api/v1/jobs", tags=["jobs"])
@@ -66,3 +59,6 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=5000, log_level="info", reload=False)
