@@ -8,7 +8,7 @@ from config import JOBS_DIR
 from models.schemas import JobCreateResponse, JobStatusResponse, LogsResponse
 from core.security import decode_token
 from core.config_loader import config_loader
-from core.exceptions import ForbiddenException
+from core.job_logger import job_logger
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,9 @@ async def create_job(
         logger.warning(f"Task {task_code} not allowed for user {username}")
         raise HTTPException(status_code=403, detail=f"Task {task_code} not allowed")
 
+    # Clear old job logs - keep only last 5 jobs
+    job_logger.clear_old_logs(JOBS_DIR, keep_last=5)
+
     max_files = config_loader.get("upload.max_files_per_job", 50)
     max_size = config_loader.get("upload.max_single_file_mb", 50)
     max_total = config_loader.get("upload.max_total_upload_mb", 200)
@@ -83,6 +86,11 @@ async def create_job(
     input_dir = job_dir / "inputs"
     input_dir.mkdir(parents=True, exist_ok=True)
 
+    # Get job logger
+    jlog = job_logger.get_logger(job_id, job_dir)
+    jlog.info(f"Starting job {job_id} for task {task_code}")
+    jlog.info(f"User: {username}, Customer: {customer}")
+
     total_bytes = 0
     saved_count = 0
     input_types = task_config.get("input_types", [".pdf"])
@@ -92,6 +100,7 @@ async def create_job(
         ext = Path(name).suffix.lower()
         
         if ext not in input_types:
+            jlog.error(f"Invalid file type: {name}")
             raise HTTPException(status_code=400, detail=f"Invalid file type: {name}. Allowed: {input_types}")
 
         out_path = input_dir / Path(name).name
@@ -110,16 +119,21 @@ async def create_job(
                 total_bytes += len(chunk)
 
                 if written > max_size * 1024 * 1024:
-                    raise HTTPException(status_code=400, detail=f"File too large: {name} (max {max_size}MB)")
+                    jlog.error(f"File too large: {name}")
+                    raise HTTPException(status_code=400, detail=f"File too large: {name}")
                 if total_bytes > max_total * 1024 * 1024:
-                    raise HTTPException(status_code=400, detail=f"Total upload too large (max {max_total}MB)")
+                    jlog.error(f"Total upload too large")
+                    raise HTTPException(status_code=400, detail=f"Total upload too large")
 
         if ext == ".pdf" and not _is_pdf_bytes(first_chunk):
+            jlog.error(f"Not a valid PDF: {name}")
             raise HTTPException(status_code=400, detail=f"Not a valid PDF: {name}")
 
+        jlog.info(f"Saved file: {name}")
         saved_count += 1
 
     if saved_count == 0:
+        jlog.error("No valid files found")
         raise HTTPException(status_code=400, detail="No valid files found")
 
     log_path = str(job_dir / "job.log")
@@ -128,6 +142,7 @@ async def create_job(
 
     container.job_worker.enqueue(job_id, task_code)
 
+    jlog.info(f"Job {job_id} queued successfully")
     logger.info(f"Job created: {job_id} for task {task_code}")
     return JobCreateResponse(job_id=job_id, status="queued", task_code=task_code)
 

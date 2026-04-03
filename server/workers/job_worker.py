@@ -4,6 +4,7 @@ from pathlib import Path
 
 from repositories.job_repository import JobRepository
 from services.pipeline_service import PipelineService
+from core.job_logger import job_logger
 
 
 class JobWorker:
@@ -26,22 +27,38 @@ class JobWorker:
             except Exception as e:
                 job_id = item[0] if isinstance(item, tuple) else item
                 self.repository.update(job_id, status="failed", progress=1.0, error=str(e))
+                try:
+                    jlog = job_logger.get_logger(job_id, Path(self.repository.get(job_id)["input_dir"]).parent)
+                    jlog.error(f"Job failed: {e}")
+                except:
+                    pass
             finally:
                 self.job_queue.task_done()
 
     def _process_job(self, job_id: str, task_code: str):
         job = self.repository.get(job_id)
         input_dir = Path(job["input_dir"])
-        log_file = Path(job["log_path"])
-
+        job_dir = input_dir.parent
+        
+        jlog = job_logger.get_logger(job_id, job_dir)
+        
         self.repository.update(job_id, status="running", progress=0.1, error=None)
+        jlog.info(f"Job started processing - task: {task_code}")
 
         if task_code == "PHOTO8":
-            exit_code = self.pipeline_service.execute(input_dir=input_dir, log_file=log_file)
+            jlog.info("Running PHOTO8 pipeline")
+            exit_code = self.pipeline_service.execute(input_dir=input_dir, log_file=job_dir / "job.log", job_logger=jlog)
+        elif task_code == "PDF_TO_EXCEL":
+            jlog.info("Running PDF_TO_EXCEL")
+            exit_code = 0
         else:
+            jlog.warning(f"Unknown task: {task_code}")
             exit_code = 0
 
         if exit_code == 0:
             self.repository.update(job_id, status="succeeded", progress=1.0, result={"message": "Done"}, error=None)
+            jlog.info("Job completed successfully")
         else:
-            self.repository.update(job_id, status="failed", progress=1.0, error=f"Pipeline exit code: {exit_code}")
+            error_msg = f"Pipeline exit code: {exit_code}"
+            self.repository.update(job_id, status="failed", progress=1.0, error=error_msg)
+            jlog.error(error_msg)
