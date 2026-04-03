@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WorkloadAutomateTool.Services;
@@ -8,46 +9,36 @@ namespace WorkloadAutomateTool.Forms
     public partial class LoginForm : Form
     {
         private readonly string _customerCode;
-        private readonly string _defaultServerUrl;
+        private readonly string _serverUrl;
 
-        public string ServerUrl => txtServerUrl.Text.Trim();
+        public string ServerUrl => _serverUrl;
 
         public LoginForm(string customerCode, string defaultServerUrl = null)
         {
             InitializeComponent();
             _customerCode = customerCode;
-            _defaultServerUrl = defaultServerUrl ?? GetDefaultServerUrl(customerCode);
+            _serverUrl = defaultServerUrl ?? GetApiBaseUrl();
             
-            txtServerUrl.Text = _defaultServerUrl;
             lblTitle.Text = $"Login - {_customerCode}";
         }
 
-        private string GetDefaultServerUrl(string customer)
+        private string GetApiBaseUrl()
         {
-            switch (customer)
-            {
-                case "HADDAD":
-                    return "http://125.234.111.210:8000";
-                case "LTD":
-                    return "http://125.234.111.210:8000";
-                case "GARAN":
-                    return "http://125.234.111.210:8000";
-                default:
-                    return "http://127.0.0.1:8000";
-            }
+            var env = ConfigurationManager.AppSettings["Environment"] ?? "prod";
+            var apiKey = $"ApiBaseUrl_{env.ToLower()}";
+            var apiUrl = ConfigurationManager.AppSettings[apiKey];
+            
+            if (string.IsNullOrEmpty(apiUrl))
+                apiUrl = ConfigurationManager.AppSettings["ApiBaseUrl_Prod"];
+            
+            return (apiUrl ?? "http://172.16.0.5:5000").TrimEnd('/');
         }
 
         private async void btnLogin_Click(object sender, EventArgs e)
         {
-            var server = txtServerUrl.Text.Trim();
+            var server = _serverUrl;
             var username = txtUsername.Text.Trim();
             var password = txtPassword.Text;
-
-            if (string.IsNullOrEmpty(server))
-            {
-                MessageBox.Show("Please enter server URL.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
 
             if (string.IsNullOrEmpty(username))
             {

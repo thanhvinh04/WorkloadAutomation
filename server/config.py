@@ -7,9 +7,23 @@ BASE_DIR = Path(__file__).resolve().parent
 # Load .env that sits next to config.py (portable)
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
+# ==== Database Configuration ====
+DB_TYPE = os.environ.get("PHOTO8_DB_TYPE", "sqlite")  # sqlite or sqlserver
+DB_HOST = os.environ.get("PHOTO8_DB_HOST", "localhost")
+DB_PORT = os.environ.get("PHOTO8_DB_PORT", "1433")
+DB_NAME = os.environ.get("PHOTO8_DB_NAME", "Photo8DB")
+DB_USER = os.environ.get("PHOTO8_DB_USER", "sa")
+DB_PASSWORD = os.environ.get("PHOTO8_DB_PASSWORD", "")
+
 STORAGE_DIR = BASE_DIR / "storage"
 JOBS_DIR = STORAGE_DIR / "jobs"
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_db_connection_string():
+    if DB_TYPE == "sqlserver":
+        return f"DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={DB_HOST},{DB_PORT};DATABASE={DB_NAME};UID={DB_USER};PWD={DB_PASSWORD};TrustServerCertificate=yes;"
+    return str(JOBS_DIR / "jobs.sqlite")
 
 # ==== Secrets / Security ====
 JWT_SECRET = os.environ.get("PHOTO8_JWT_SECRET", "")

@@ -40,7 +40,7 @@ namespace WorkloadAutomateTool.Forms
             this.SuspendLayout();
 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(400, 280);
+            this.ClientSize = new System.Drawing.Size(400, 260);
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -48,6 +48,7 @@ namespace WorkloadAutomateTool.Forms
             this.Text = "Login";
             this.Font = new System.Drawing.Font("Segoe UI", 10F);
 
+            // Title
             this.lblTitle.AutoSize = true;
             this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
             this.lblTitle.Location = new System.Drawing.Point(20, 20);
@@ -55,55 +56,61 @@ namespace WorkloadAutomateTool.Forms
             this.lblTitle.Size = new System.Drawing.Size(60, 25);
             this.lblTitle.Text = "Login";
 
-            this.lblServerUrl.AutoSize = true;
-            this.lblServerUrl.Location = new System.Drawing.Point(20, 65);
+            // Server URL (hidden - auto fill)
+            this.lblServerUrl.Visible = false;
+            this.lblServerUrl.Location = new System.Drawing.Point(20, 60);
             this.lblServerUrl.Name = "lblServerUrl";
-            this.lblServerUrl.Size = new System.Drawing.Size(75, 17);
-            this.lblServerUrl.Text = "Server URL";
 
-            this.txtServerUrl.Location = new System.Drawing.Point(20, 85);
+            this.txtServerUrl.Visible = false;
+            this.txtServerUrl.Location = new System.Drawing.Point(20, 80);
             this.txtServerUrl.Name = "txtServerUrl";
-            this.txtServerUrl.Size = new System.Drawing.Size(360, 25);
 
+            // Username label
             this.lblUsername.AutoSize = true;
-            this.lblUsername.Location = new System.Drawing.Point(20, 120);
+            this.lblUsername.Location = new System.Drawing.Point(20, 60);
             this.lblUsername.Name = "lblUsername";
             this.lblUsername.Size = new System.Drawing.Size(75, 17);
             this.lblUsername.Text = "Username";
 
-            this.txtUsername.Location = new System.Drawing.Point(20, 140);
+            // Username textbox
+            this.txtUsername.Location = new System.Drawing.Point(20, 80);
             this.txtUsername.Name = "txtUsername";
             this.txtUsername.Size = new System.Drawing.Size(360, 25);
 
+            // Password label
             this.lblPassword.AutoSize = true;
-            this.lblPassword.Location = new System.Drawing.Point(20, 175);
+            this.lblPassword.Location = new System.Drawing.Point(20, 115);
             this.lblPassword.Name = "lblPassword";
             this.lblPassword.Size = new System.Drawing.Size(70, 17);
             this.lblPassword.Text = "Password";
 
-            this.txtPassword.Location = new System.Drawing.Point(20, 195);
+            // Password textbox
+            this.txtPassword.Location = new System.Drawing.Point(20, 135);
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.PasswordChar = '*';
             this.txtPassword.Size = new System.Drawing.Size(360, 25);
             this.txtPassword.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPassword_KeyDown);
 
-            this.btnLogin.Location = new System.Drawing.Point(210, 235);
+            // Login button
+            this.btnLogin.Location = new System.Drawing.Point(210, 175);
             this.btnLogin.Name = "btnLogin";
             this.btnLogin.Size = new System.Drawing.Size(85, 32);
             this.btnLogin.Text = "Login";
             this.btnLogin.UseVisualStyleBackColor = true;
             this.btnLogin.Click += new System.EventHandler(this.btnLogin_Click);
 
-            this.btnCancel.Location = new System.Drawing.Point(305, 235);
+            // Cancel button
+            this.btnCancel.Location = new System.Drawing.Point(305, 175);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 32);
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
 
+            // Status label
             this.lblStatus.AutoSize = true;
             this.lblStatus.ForeColor = System.Drawing.Color.Red;
-            this.lblStatus.Location = new System.Drawing.Point(20, 242);
+            this.lblStatus.Location = new System.Drawing.Point(20, 182);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(0, 17);
             this.lblStatus.Visible = false;
