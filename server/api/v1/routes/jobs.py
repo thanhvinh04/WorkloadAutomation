@@ -1,13 +1,16 @@
+import logging
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 
 from config import JOBS_DIR
 from models.schemas import JobCreateResponse, JobStatusResponse, LogsResponse
 from core.security import decode_token
 from core.config_loader import config_loader
 from core.exceptions import ForbiddenException
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from services.job_service import JobService
@@ -33,29 +36,27 @@ def _is_pdf_bytes(head: bytes) -> bool:
     return head.startswith(b"%PDF")
 
 
-def get_current_user_info(token: str = None):
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing token")
-    payload = decode_token(token)
-    username = payload.get("sub")
-    if not username:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return payload
-
-
 @router.post("", response_model=JobCreateResponse)
 async def create_job(
     files: list[UploadFile] = File(...),
     task_code: str = Query(..., description="Task code"),
-    token: str = None,
+    token: str = Query(None, description="JWT token"),
 ):
+    logger.info(f"Create job request - task_code: {task_code}, token present: {bool(token)}")
+    
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
 
+    if not token:
+        logger.warning("Missing token in request")
+        raise HTTPException(status_code=401, detail="Missing token")
+
     try:
         payload = decode_token(token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        logger.info(f"Token decoded for user: {payload.get('sub')}")
+    except Exception as e:
+        logger.error(f"Token decode failed: {e}")
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
     username = payload.get("sub")
     customer = payload.get("customer", "")
@@ -63,13 +64,12 @@ async def create_job(
 
     task_config = config_loader.get_task_config(task_code)
     if not task_config:
+        logger.warning(f"Task {task_code} not found")
         raise HTTPException(status_code=400, detail=f"Task {task_code} not found")
 
     if task_code not in allowed_tasks:
+        logger.warning(f"Task {task_code} not allowed for user {username}")
         raise HTTPException(status_code=403, detail=f"Task {task_code} not allowed")
-
-    if customer not in task_config.get("allowed_customers", []):
-        raise HTTPException(status_code=403, detail=f"Task not allowed for customer {customer}")
 
     max_files = config_loader.get("upload.max_files_per_job", 50)
     max_size = config_loader.get("upload.max_single_file_mb", 50)
@@ -85,14 +85,14 @@ async def create_job(
 
     total_bytes = 0
     saved_count = 0
+    input_types = task_config.get("input_types", [".pdf"])
 
     for uf in files:
         name = (uf.filename or "").strip()
         ext = Path(name).suffix.lower()
-        input_types = task_config.get("input_types", [".pdf"])
         
         if ext not in input_types:
-            raise HTTPException(status_code=400, detail=f"Invalid file type: {name}")
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {name}. Allowed: {input_types}")
 
         out_path = input_dir / Path(name).name
         written = 0
@@ -110,9 +110,9 @@ async def create_job(
                 total_bytes += len(chunk)
 
                 if written > max_size * 1024 * 1024:
-                    raise HTTPException(status_code=400, detail=f"File too large: {name}")
+                    raise HTTPException(status_code=400, detail=f"File too large: {name} (max {max_size}MB)")
                 if total_bytes > max_total * 1024 * 1024:
-                    raise HTTPException(status_code=400, detail=f"Total upload too large")
+                    raise HTTPException(status_code=400, detail=f"Total upload too large (max {max_total}MB)")
 
         if ext == ".pdf" and not _is_pdf_bytes(first_chunk):
             raise HTTPException(status_code=400, detail=f"Not a valid PDF: {name}")
@@ -128,25 +128,34 @@ async def create_job(
 
     container.job_worker.enqueue(job_id, task_code)
 
+    logger.info(f"Job created: {job_id} for task {task_code}")
     return JobCreateResponse(job_id=job_id, status="queued", task_code=task_code)
 
 
 @router.get("/{job_id}", response_model=JobStatusResponse)
-def get_job(job_id: str, token: str = None):
+def get_job(job_id: str, token: str = Query(None, description="JWT token")):
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+    
     try:
         payload = decode_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
     username = payload.get("sub")
     return container.job_service.get_job(job_id, username)
 
 
 @router.get("/{job_id}/logs", response_model=LogsResponse)
-def get_logs(job_id: str, after_line: int = Query(default=0, ge=0), token: str = None):
+def get_logs(job_id: str, after_line: int = Query(default=0, ge=0), token: str = Query(None, description="JWT token")):
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+    
     try:
         payload = decode_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
     username = payload.get("sub")
     result = container.job_service.get_job_logs(job_id, username, after_line)
     return LogsResponse(next_after_line=result["next_after_line"], lines=result["lines"])

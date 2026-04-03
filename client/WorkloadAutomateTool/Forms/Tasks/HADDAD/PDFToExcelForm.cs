@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using WorkloadAutomateTool.Services;
 
 namespace WorkloadAutomateTool.Forms.Tasks.HADDAD
 {
@@ -195,9 +196,14 @@ namespace WorkloadAutomateTool.Forms.Tasks.HADDAD
             }
         }
 
-        private async Task<string> CreateJobUploadFiles(string server, List<string> files)
+private async Task<string> CreateJobUploadFiles(string server, List<string> files)
         {
-            var url = $"{server}/api/v1/jobs";
+            // Get token from AuthService
+            var token = AuthService.Instance.Token;
+            var encodedToken = Uri.EscapeDataString(token);
+            
+            var url = $"{server}/api/v1/jobs?task_code=PDF_TO_EXCEL&token={encodedToken}";
+            
             using (var form = new MultipartFormDataContent())
             {
                 foreach (var path in files)
@@ -208,7 +214,7 @@ namespace WorkloadAutomateTool.Forms.Tasks.HADDAD
                     part.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
                     form.Add(part, "files", fileName);
                 }
-
+                
                 var resp = await _http.PostAsync(url, form);
                 var body = await resp.Content.ReadAsStringAsync();
 

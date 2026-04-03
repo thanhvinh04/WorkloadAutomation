@@ -140,21 +140,20 @@ class JobRepository:
             vals.append(v)
         fields.append("updated_at=?")
         if DB_TYPE == "sqlserver":
-            vals.append("DATEADD(HOUR, 7, GETUTCDATE())")
-        else:
-            vals.append(now_iso())
-        vals.append(job_id)
-
-        if DB_TYPE == "sqlserver":
-            conn = self._get_sqlserver_conn()
-            cursor = conn.cursor()
+            # For SQL Server, use DATEADD function - don't add parameter
             set_clause = ", ".join(fields)
             if "updated_at=?" in set_clause:
                 set_clause = set_clause.replace("updated_at=?", "updated_at=DATEADD(HOUR, 7, GETUTCDATE())")
+                # Don't add to vals since we're using direct SQL function
+            vals.append(job_id)
+            conn = self._get_sqlserver_conn()
+            cursor = conn.cursor()
             cursor.execute(f"UPDATE jobs SET {set_clause} WHERE job_id=?", tuple(vals))
             conn.commit()
             conn.close()
         else:
+            vals.append(now_iso())
+            vals.append(job_id)
             conn = self._get_sqlite_conn()[0]
             conn.execute(f"UPDATE jobs SET {', '.join(fields)} WHERE job_id=?", tuple(vals))
             conn.commit()
