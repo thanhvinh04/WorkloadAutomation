@@ -1,0 +1,39 @@
+# ---------- Core ----------
+pip>=24.0
+setuptools>=70.0
+wheel>=0.43.0
+
+# ---------- API (FastAPI) ----------
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-dotenv>=1.0.1
+python-multipart>=0.0.9
+
+# JWT / Auth
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt==4.0.1
+
+# ---------- PDF Parsing ----------
+pdfplumber>=0.11.0
+pdfminer.six>=20231228
+
+# ---------- Data / SQL ----------
+numpy>=2.0.0
+pandas>=2.2.0
+SQLAlchemy>=2.0.0
+pyodbc>=5.1.0
+
+# ---------- Google Sheets ----------
+gspread>=6.1.0
+google-auth>=2.25.0
+google-auth-oauthlib>=1.2.0
+google-api-python-client>=2.120.0
+openpyxl>=3.1.0
+
+# ---------- Utilities ----------
+requests>=2.31.0
+tqdm>=4.66.0
+python-dateutil>=2.9.0.post0
+pytz>=2024.1
+minio>=7.2.0
